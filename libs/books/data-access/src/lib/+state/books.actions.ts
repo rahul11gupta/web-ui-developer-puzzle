@@ -13,7 +13,7 @@ export const searchBooksSuccess = createAction(
 
 export const searchBooksFailure = createAction(
   '[Book Search API] Search failure',
-  props<{ error: any }>()
+  props<{ error: string }>()
 );
 
 export const clearSearch = createAction('[Books Search Bar] Clear Search');
