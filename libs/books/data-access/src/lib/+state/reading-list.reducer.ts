@@ -1,5 +1,10 @@
 import { Action, createReducer, on } from '@ngrx/store';
-import { createEntityAdapter, EntityAdapter, EntityState } from '@ngrx/entity';
+import {
+  createEntityAdapter,
+  EntityAdapter,
+  EntityState,
+  Update,
+} from '@ngrx/entity';
 
 import * as ReadingListActions from './reading-list.actions';
 import { ReadingListItem } from '@tmo/shared/models';
@@ -18,33 +23,33 @@ export interface ReadingListPartialState {
 export const readingListAdapter: EntityAdapter<ReadingListItem> = createEntityAdapter<
   ReadingListItem
 >({
-  selectId: item => item.bookId
+  selectId: (item) => item.bookId,
 });
 
 export const initialState: State = readingListAdapter.getInitialState({
   loaded: false,
-  error: null
+  error: null,
 });
 
 const readingListReducer = createReducer(
   initialState,
-  on(ReadingListActions.init, state => {
+  on(ReadingListActions.init, (state) => {
     return {
       ...state,
       loaded: false,
-      error: null
+      error: null,
     };
   }),
   on(ReadingListActions.loadReadingListSuccess, (state, action) => {
     return readingListAdapter.setAll(action.list, {
       ...state,
-      loaded: true
+      loaded: true,
     });
   }),
   on(ReadingListActions.loadReadingListError, (state, action) => {
     return {
       ...state,
-      error: action.error
+      error: action.error,
     };
   }),
   on(ReadingListActions.addToReadingList, (state, action) =>
@@ -58,7 +63,37 @@ const readingListReducer = createReducer(
   ),
   on(ReadingListActions.failedRemoveFromReadingList, (state, action) =>
     readingListAdapter.addOne(action.item, state)
-  )
+  ),
+  on(ReadingListActions.toggleMarkBookAsRead, (state, action) => {
+    const updateItem: Update<ReadingListItem> = {
+      id: action.item.bookId,
+      changes: {
+        finished:
+          action.status === false
+            ? false
+            : action.item.finished === null
+            ? true
+            : !action.item.finished,
+        finishedDate:
+          action.status === false
+            ? ''
+            : action.item.finished
+            ? ''
+            : new Date().toISOString(),
+      },
+    };
+    return readingListAdapter.updateOne(updateItem, state);
+  }),
+  on(ReadingListActions.failureToggleMarkBookAsRead, (state, action) => {
+    const updateItem: Update<ReadingListItem> = {
+      id: action.item.bookId,
+      changes: {
+        finished: false,
+        finishedDate: '',
+      },
+    };
+    return readingListAdapter.updateOne(updateItem, state);
+  })
 );
 
 export function reducer(state: State | undefined, action: Action) {
