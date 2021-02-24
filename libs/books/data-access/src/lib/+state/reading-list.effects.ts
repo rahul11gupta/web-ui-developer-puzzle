@@ -54,6 +54,35 @@ export class ReadingListEffects implements OnInitEffects {
     )
   );
 
+  toggleMarkAsRead$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ReadingListActions.toggleMarkBookAsRead),
+      concatMap((param) => {
+        const updateItem = JSON.parse(JSON.stringify(param.item));
+        updateItem.finished =
+          param.status === false
+            ? false
+            : param.item.finished === undefined
+            ? true
+            : !param.item.finished;
+        updateItem.finishedDate =
+          param.status === false
+            ? ''
+            : param.item.finished
+            ? ''
+            : new Date().toISOString();
+        return this.http
+          .put(`/api/reading-list/${updateItem.bookId}/finished`, updateItem)
+          .pipe(
+            map(() => ReadingListActions.confirmedToggleMarkBookAsRead(param)),
+            catchError(() =>
+              of(ReadingListActions.failureToggleMarkBookAsRead(param))
+            )
+          );
+      })
+    )
+  );
+
   ngrxOnInitEffects() {
     return ReadingListActions.init();
   }

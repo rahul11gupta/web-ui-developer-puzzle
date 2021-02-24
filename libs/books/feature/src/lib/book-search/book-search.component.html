@@ -39,7 +39,7 @@
               (click)="addBookToReadingList(b)"
               [disabled]="b.isAdded"
             >
-              Want to Read
+              {{ selectText(b) }}
             </button>
           </div>
         </div>

@@ -3,9 +3,11 @@ import {
   initialState,
   readingListAdapter,
   reducer,
-  State
+  State,
 } from './reading-list.reducer';
 import { createBook, createReadingListItem } from '@tmo/shared/testing';
+import { Update } from '@ngrx/entity';
+import { ReadingListItem } from '@tmo/shared/models';
 
 describe('Reading List Reducer', () => {
   describe('valid Books actions', () => {
@@ -22,7 +24,7 @@ describe('Reading List Reducer', () => {
       const list = [
         createReadingListItem('A'),
         createReadingListItem('B'),
-        createReadingListItem('C')
+        createReadingListItem('C'),
       ];
       const action = ReadingListActions.loadReadingListSuccess({ list });
 
@@ -34,7 +36,7 @@ describe('Reading List Reducer', () => {
 
     it('failedAddToReadingList should undo book addition to the state', () => {
       const action = ReadingListActions.failedAddToReadingList({
-        book: createBook('B')
+        book: createBook('B'),
       });
 
       const result: State = reducer(state, action);
@@ -44,12 +46,24 @@ describe('Reading List Reducer', () => {
 
     it('failedRemoveFromReadingList should undo book removal from the state', () => {
       const action = ReadingListActions.failedRemoveFromReadingList({
-        item: createReadingListItem('C')
+        item: createReadingListItem('C'),
       });
 
       const result: State = reducer(state, action);
 
       expect(result.ids).toEqual(['A', 'B', 'C']);
+    });
+
+    it('failedUpdateReadingListItem should undo setting a book as finished', () => {
+      const item = createReadingListItem('A');
+      const action = ReadingListActions.failureToggleMarkBookAsRead({
+        item: item,
+        status: false,
+      });
+
+      const result: State = reducer(state, action);
+
+      expect(result.entities['A'].finished).toEqual(false);
     });
   });
 
