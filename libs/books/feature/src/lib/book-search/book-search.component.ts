@@ -1,39 +1,45 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
+import { Observable, Subject } from 'rxjs';
+import { take, takeUntil } from 'rxjs/operators';
 import {
   addToReadingList,
   clearSearch,
   getAllBooks,
   ReadingListBook,
-  searchBooks
+  searchBooks,
+  confirmedAddToReadingList,
+  undoAddToReadingList,
 } from '@tmo/books/data-access';
-import { FormBuilder } from '@angular/forms';
 import { Book } from '@tmo/shared/models';
-import { Observable } from 'rxjs';
 
 @Component({
   selector: 'tmo-book-search',
   templateUrl: './book-search.component.html',
-  styleUrls: ['./book-search.component.scss']
+  styleUrls: ['./book-search.component.scss'],
 })
-export class BookSearchComponent implements OnInit {
-  books$ : Observable<ReadingListBook[]> = this.store.select(getAllBooks);
-
+export class BookSearchComponent implements OnInit, OnDestroy {
+  books$: Observable<ReadingListBook[]> = this.store.select(getAllBooks);
+  private unsubscribe$: Subject<void> = new Subject();
   searchForm = this.fb.group({
-    term: ''
+    term: '',
   });
 
   constructor(
     private readonly store: Store,
-    private readonly fb: FormBuilder
+    private readonly fb: FormBuilder,
+    private readonly action$: Actions,
+    private snackbar: MatSnackBar
   ) {}
 
   get searchTerm(): string {
     return this.searchForm.value.term;
   }
 
-  ngOnInit(): void {
-  }
+  ngOnInit(): void {}
 
   formatDate(date: void | string) {
     return date
@@ -43,6 +49,22 @@ export class BookSearchComponent implements OnInit {
 
   addBookToReadingList(book: Book) {
     this.store.dispatch(addToReadingList({ book }));
+    this.undoAddBookToReadingList();
+  }
+
+  undoAddBookToReadingList() {
+    this.action$
+      .pipe(ofType(confirmedAddToReadingList), takeUntil(this.unsubscribe$))
+      .subscribe(({ book }) => {
+        const snackbarRef = this.snackbar.open(
+          `${book.title} added to your reading list!`,
+          'Undo'
+        );
+        snackbarRef
+          .onAction()
+          .pipe(take(1), takeUntil(this.unsubscribe$))
+          .subscribe(() => this.store.dispatch(undoAddToReadingList({ book })));
+      });
   }
 
   searchExample() {
@@ -56,5 +78,10 @@ export class BookSearchComponent implements OnInit {
     } else {
       this.store.dispatch(clearSearch());
     }
+  }
+
+  ngOnDestroy() {
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
   }
 }
